@@ -1,0 +1,104 @@
+import pygame
+import sys
+
+# Inicializar Pygame
+pygame.init()
+
+# Definir colores
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+
+# Definir parámetros de la ventana
+WIDTH, HEIGHT = 800, 600
+FPS = 60
+
+# Definir parámetros del ragdoll
+torso_width = 50
+torso_height = 100
+head_radius = 20
+limb_length = 50
+joint_radius = 5
+spring_constant = 0.5
+gravity = 0.5
+
+# Inicializar la ventana
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Ragdoll con Resortes")
+clock = pygame.time.Clock()
+
+# Clase para representar un cuerpo rígido
+class RigidBody:
+    def __init__(self, x, y, width, height, color):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.color = color
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, self.color, self.rect)
+
+# Clase para representar una unión (resorte) entre dos cuerpos rígidos
+class Joint:
+    def __init__(self, body1, body2, length, spring_constant):
+        self.body1 = body1
+        self.body2 = body2
+        self.length = length
+        self.spring_constant = spring_constant
+
+    def update(self):
+        dx = self.body2.rect.centerx - self.body1.rect.centerx
+        dy = self.body2.rect.centery - self.body1.rect.centery
+        dist = (dx ** 2 + dy ** 2) ** 0.5
+        force = (dist - self.length) * self.spring_constant
+        fx = force * dx / dist
+        fy = force * dy / dist
+        self.body1.rect.x += fx
+        self.body1.rect.y += fy
+        self.body2.rect.x -= fx
+        self.body2.rect.y -= fy
+
+# Crear cuerpos rígidos para el torso, cabeza y extremidades
+torso = RigidBody(WIDTH // 2 - torso_width // 2, HEIGHT // 2, torso_width, torso_height, BLACK)
+head = RigidBody(torso.rect.centerx - head_radius, torso.rect.top - head_radius, head_radius * 2, head_radius * 2, BLACK)
+left_arm = RigidBody(torso.rect.left - limb_length, torso.rect.centery, limb_length, 10, BLACK)
+right_arm = RigidBody(torso.rect.right, torso.rect.centery, limb_length, 10, BLACK)
+left_leg = RigidBody(torso.rect.left, torso.rect.bottom, 10, limb_length, BLACK)
+right_leg = RigidBody(torso.rect.right - 10, torso.rect.bottom, 10, limb_length, BLACK)
+
+# Crear uniones (resortes) entre los cuerpos rígidos
+head_joint = Joint(torso, head, torso_height / 2, spring_constant)
+left_arm_joint = Joint(torso, left_arm, limb_length / 2, spring_constant)
+right_arm_joint = Joint(torso, right_arm, limb_length / 2, spring_constant)
+left_leg_joint = Joint(torso, left_leg, limb_length / 2, spring_constant)
+right_leg_joint = Joint(torso, right_leg, limb_length / 2, spring_constant)
+
+# Lista de todos los cuerpos rígidos y uniones
+rigid_bodies = [torso, head, left_arm, right_arm, left_leg, right_leg]
+joints = [head_joint, left_arm_joint, right_arm_joint, left_leg_joint, right_leg_joint]
+
+# Bucle principal del juego
+running = True
+while running:
+    clock.tick(FPS)
+    
+    # Manejo de eventos
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+    
+    # Aplicar gravedad a los cuerpos rígidos
+    for body in rigid_bodies:
+        body.rect.y += gravity
+    
+    # Actualizar las uniones (resortes)
+    for joint in joints:
+        joint.update()
+    
+    # Dibujar los cuerpos rígidos
+    screen.fill(WHITE)
+    for body in rigid_bodies:
+        body.draw(screen)
+    pygame.display.flip()
+
+# Salir del juego
+pygame.quit()
+sys.exit()
